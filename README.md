@@ -1,10 +1,11 @@
 #### (Random) Data Generator
 
 Éste módulo proporciona un proceso que permite generar registros con datos casuales para las colecciones:
+
 1. 'org.keedio.domain.Account'.
 2. 'org.keedio.domain.AccountTransaction'.
 
-El data generator genera un número indefinido de objetos **Account** y, para cada uno de ellos, un número configurable de **AccountTransacion**s. El throughput máximo de generación de objetos de tipo ]**AccountTransaction** es customizable por medio de una property, esto es indispensable para poder medir el throughput máximo de todo el sistema.
+El data generator genera un número indefinido de objetos **Account** y, para cada uno de ellos, un número configurable de **AccountTransacion**s. El throughput máximo de generación de objetos de tipo **AccountTransaction** es customizable por medio de una property, esto es indispensable para poder medir el throughput máximo de todo el sistema.
 
 La configuración del endpoint de mongodb se encuentra en [./common/src/main/resources/application.conf](./common/src/main/resources/application.conf).
 
@@ -31,6 +32,11 @@ Además, no se perimitrán más de 1000 escrituras/segundo en la colección Acco
 ##### Configurar el actor de salida
 En esta distribuición se proporcionan escritores para syslog, fichero, kafka y mongo.
 Para seleccionar el escritor a activar, es suficiente modificar la property active.actor en [./datagenerator/src/main/resources/application.conf](./datagenerator/src/main/resources/application.conf).
+
+###### Configurar actor SyslogLoggerActor
+Es necesario setear la property ``active.actor=sysloggerActor```.
+
+Adicionalmente, es necesario configurar el appender de [./datagenerator/src/main/resources/logback.xml](logback) con el endpoint del servidor de syslog
 
 ##### Cómo lanzar el datagenerator
 desde la carpeta principal del proyecto, y no desde la carpeta del módulo datagenerator:
