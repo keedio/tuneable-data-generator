@@ -1,0 +1,152 @@
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:mongo="http://www.springframework.org/schema/data/mongo"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:encryption="http://www.jasypt.org/schema/encryption"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+			 http://www.springframework.org/schema/data/mongo http://www.springframework.org/schema/data/mongo/spring-mongo-1.2.xsd
+			 http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+			 http://www.jasypt.org/schema/encryption http://www.jasypt.org/schema/encryption/jasypt-spring31-encryption-1.xsd"
+       default-lazy-init="true">
+
+
+
+
+<!-- ************ MongoTemplates ***************** -->
+    <bean id="mongoTemplateBusiness" class="org.springframework.data.mongodb.core.MongoTemplate" >
+        <constructor-arg name="mongoDbFactory" ref="mongoDbBusiness" />
+        <constructor-arg name="mongoConverter" ref="mappingConverterBusiness" />
+    </bean>
+
+    <bean id="mongoTemplateStats" class="org.springframework.data.mongodb.core.MongoTemplate">
+        <constructor-arg name="mongoDbFactory" ref="mongoDbStats" />
+        <constructor-arg name="mongoConverter" ref="mappingConverterStats" />
+    </bean>
+
+    <!-- bean id="mongoTemplateBigData" class="org.springframework.data.mongodb.core.MongoTemplate">
+        <constructor-arg name="mongoDbFactory" ref="mongoDbBigData" />
+        <constructor-arg name="mongoConverter" ref="mappingConverterBigData" />
+    </bean-->
+
+    <bean id="baseDocumentBeforeConvertListener"
+          class="es.care.sf.business.core.persistence.base.BaseDocumentBeforeConvertListener" />
+
+
+    <!-- ************ Mongos ***************** -->
+
+    <!-- mongo:mongo id="mongoStats" write-concern="SAFE"
+        replica-set="${mongodb.replicaSet.stats}">
+        <mongo:options auto-connect-retry="true"
+            connections-per-host="10" socket-keep-alive="true"
+            max-auto-connect-retry-time="15000" socket-timeout="30000" />
+    </mongo:mongo-->
+
+    <!--mongo:mongo id="mongoBigData" write-concern="NORMAL"
+        replica-set="${mongodb.replicaSet.bigData}">
+        <mongo:options auto-connect-retry="true"
+            connections-per-host="10" socket-keep-alive="true"
+            max-auto-connect-retry-time="15000" socket-timeout="30000" />
+    </mongo:mongo -->
+
+    <!-- ************ MongoDbFactories ***************** -->
+    <mongo:db-factory id="mongoDbBusiness" dbname="${mongodb.database.business}"
+                      username="${mongodb.username.business}" password="${mongodb.password.business}"
+                      mongo-ref="mongoBusiness" />
+
+    <mongo:db-factory id="mongoDbStats" dbname="${mongodb.database.stats}"
+                      username="${mongodb.username.stats}" password="${mongodb.password.stats}"
+                      mongo-ref="mongoBusiness" />
+
+    <!-- mongo:db-factory id="mongoDbBigData" dbname="${mongodb.database.bigData}"
+        username="${mongodb.username.bigData}" password="${mongodb.password.bigData}"
+        mongo-ref="mongoBigData" /-->
+
+
+    <!-- ************ MappingConverters ***************** -->
+
+    <mongo:mapping-converter id="mappingConverterBusiness"
+                             db-factory-ref="mongoDbBusiness">
+        <mongo:custom-converters
+                base-package="es.care.sf.business.core.persistence.converters">
+        </mongo:custom-converters>
+    </mongo:mapping-converter>
+
+    <mongo:mapping-converter id="mappingConverterStats"
+                             db-factory-ref="mongoDbStats">
+        <mongo:custom-converters
+                base-package="es.care.sf.business.core.persistence.converters">
+        </mongo:custom-converters>
+    </mongo:mapping-converter>
+
+    <!-- mongo:mapping-converter id="mappingConverterBigData"
+        db-factory-ref="mongoDbBigData">
+        <mongo:custom-converters
+            base-package="es.care.sf.business.core.persistence.converters">
+        </mongo:custom-converters>
+    </mongo:mapping-converter-->
+
+
+    <!-- ********   Component Scanning ********** -->
+    <context:component-scan base-package="es.care.sf.business.hash" />
+
+
+    <!-- **********   Encryption ********** -->
+    <encryption:string-encryptor id="propEncryptor"
+                                 config-bean="configPropEncryptor" />
+
+    <encryption:encryptor-config id="configPropEncryptor"
+                                 algorithm-env-name="ENCRYPT_ALGORITHM"
+                                 key-obtention-iterations-env-name="ENCRYPT_ITERATIONS"
+                                 provider-class-name-env-name="JCE_PROVIDER" password-env-name="ENCRYPT_PASSWORD"
+                                 salt-generator-bean="saltGen" />
+
+    <bean id="saltGen" class="org.jasypt.salt.RandomSaltGenerator" />
+
+    <bean id="encoding" class="java.lang.String">
+        <constructor-arg value="UTF-8" />
+    </bean>
+
+
+    <!-- ********** Profiles ********** -->
+    <beans profile="app">
+        <mongo:mongo id="mongoBusiness" write-concern="SAFE"
+                     replica-set="${mongodb.replicaSet.business}" >
+            <mongo:options auto-connect-retry="true"
+                           connections-per-host="${global.mongodb.connections}" socket-keep-alive="true"
+                           max-auto-connect-retry-time="15000" socket-timeout="30000" />
+        </mongo:mongo>
+
+        <encryption:encryptable-property-placeholder
+                encryptor="propEncryptor"
+                file-encoding="encoding"
+                ignore-unresolvable="true"
+                location="file:${CARE_CONFIG}/persistence-app.properties" />
+
+    </beans>
+
+
+    <beans profile="test">
+        <!--bean id="fongo" class="es.care.sf.utils.FakeMongo">
+            <constructor-arg value="mongo-test"/>
+
+            <property name="categoriesBusiness" value="classpath:categories-business.js"/>
+            <property name="categoriesStats" value="classpath:categories-test.js"/>
+        </bean>
+        <bean id="mongoBusiness" class="com.mongodb.Mongo" factory-bean="fongo" factory-method="getMongo"/-->
+
+        <mongo:mongo id="mongoBusiness" write-concern="SAFE"
+            replica-set="${mongodb.replicaSet.business}" >
+            <mongo:options auto-connect-retry="true"
+            connections-per-host="${global.mongodb.connections}" socket-keep-alive="true"
+            max-auto-connect-retry-time="15000" socket-timeout="30000" />
+        </mongo:mongo>
+        <encryption:encryptable-property-placeholder
+                encryptor="propEncryptor"
+                file-encoding="encoding"
+                ignore-unresolvable="true"
+                location="classpath:test/persistence-test.properties" />
+
+    </beans>
+
+
+
+</beans>
