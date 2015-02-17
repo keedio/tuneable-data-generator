@@ -1,8 +1,13 @@
+import AssemblyKeys._
+import sbtassembly.Plugin._
+
 name := "tuneable-data-generator"
 
 version := "0.0.1"
 
 scalaVersion := "2.10.4"
+
+seq(assemblySettings: _*)
 
 organization in ThisBuild := "org.keedio.datagenerator"
 
@@ -30,6 +35,17 @@ publishTo in ThisBuild := Some(Resolver.file("file", new File(Path.userHome.abso
 
 publishMavenStyle in ThisBuild := true
 
+val mysettings = assemblySettings ++ commonSettings ++
+Seq(test in assembly := {},
+mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) ⇒
+{
+	case PathList(xs@_*) if xs.last endsWith "application.conf" => {MergeStrategy.concat}
+        case PathList("META-INF", "spring.tooling") => {MergeStrategy.discard}
+        case PathList("META-INF", "MANIFEST.MF") => {MergeStrategy.discard}
+	case x => old(x)
+}
+})
+
 lazy val root = project.in(file("."))
   .aggregate(
     common,
@@ -41,10 +57,11 @@ lazy val commonSettings = net.virtualvoid.sbt.graph.Plugin.graphSettings
 
 lazy val common = project
 
-lazy val datagenerator = project.dependsOn(common).settings(commonSettings:_*)
+lazy val datagenerator = project.dependsOn(common).settings(commonSettings: _*).settings(mysettings: _*)
 
 // Add any command aliases that may be useful as shortcuts
 addCommandAlias("cc", ";clean;compile")
 
 addCommandAlias("pt", ";clean;package;test")
 
+mainClass in assembly := Some("org.keedio.datagenerator.Main")

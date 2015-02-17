@@ -34,7 +34,7 @@ En esta distribuición se proporcionan escritores para syslog, fichero, kafka y 
 Para seleccionar el escritor a activar, es suficiente modificar la property active.actor en [./datagenerator/src/main/resources/application.conf](./datagenerator/src/main/resources/application.conf).
 
 ###### Configurar actor SyslogLoggerActor
-Es necesario setear la property ``active.actor=sysloggerActor```.
+Es necesario setear la property ``active.actor=sysloggerActor``.
 
 Adicionalmente, es necesario configurar el appender de [./datagenerator/src/main/resources/logback.xml](logback) con el endpoint del servidor de syslog
 
@@ -47,4 +47,14 @@ $ sbt datagenerator/run
 para arrancar la generacion a fichero, usar el siguiente comando:
 ```
 $ sbt datagenerator/run -DfileAppender.output=/ruta/fichero/salida.log
+```
+
+##### Lanzar el datagenerator usando el assembly jar
+```
+$ java <options> -jar datagenerator-assembly-0.1.0-SNAPSHOT.jar
+```
+
+Ejemplo, lanzar el datagenerator con un rate limit de 100, usando el sysloggerActor cómo plugin de salida
+```
+$ java -Drate.limiter=100 -Dactive.actor=sysloggerActor -jar datagenerator-assembly-0.1.0-SNAPSHOT.jar
 ```
