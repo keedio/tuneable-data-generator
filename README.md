@@ -56,7 +56,7 @@ $ java -Drate.limiter=100 -Dactive.actor=sysloggerActor -Dsyslog.host=localhost 
 
 Ejemplo 2: lanzar el datagenerator con un rate limit de 5, usando el kafkaWriterActor cómo plugin de salida
 ```
-$ java -Dactive.actor=kafkaWriterActor -Drate.limiter=5 -Dkafka.brokers=localhost:9093  -jar datagenerator-assembly-0.1.0-SNAPSHOT.jar
+$ java -Dactive.actor=kafkaWriterActor -Drate.limiter=5 -Dkafka.brokers=localhost:9093 -Dkafka.topic=myTopicName  -jar datagenerator-assembly-0.1.0-SNAPSHOT.jar
 ```
 
 Ejemplo 3: lanzar el datagenerator con un rate limit de 5, usando el fileWriterActor cómo plugin de salida

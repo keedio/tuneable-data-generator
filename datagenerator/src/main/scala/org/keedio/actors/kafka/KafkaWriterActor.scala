@@ -49,5 +49,5 @@ class KafkaWriterActor extends Actor with LazyLogging with KafkaConfig{
     case _ => logger.error("es.care.sf.business.common.message.Message not recognized")
   }
 
-  protected def topic: String = "infinito"
+  protected def topic: String = kafkaTopic
 }
