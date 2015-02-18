@@ -5,9 +5,9 @@
         </encoder>
     </appender>
     <appender name="SYSLOG" class="ch.qos.logback.classic.net.SyslogAppender">
-        <syslogHost>localhost</syslogHost>
-        <facility>USER</facility>
-        <port>5140</port>
+        <syslogHost>${syslog.host}</syslogHost>
+        <facility>${syslog.facility}</facility>
+        <port>${syslog.port}</port>
 
         <suffixPattern>keedio.datagenerator: %date{yyyy-MM-dd HH:mm:ss.SSS} %level [%thread] %logger{10} %msg%n</suffixPattern>
     </appender>
