@@ -38,15 +38,10 @@ Es necesario setear la property ``active.actor=sysloggerActor``.
 
 Adicionalmente, es necesario configurar el appender de [./datagenerator/src/main/resources/logback.xml](logback) con el endpoint del servidor de syslog
 
-##### Cómo lanzar el datagenerator
-desde la carpeta principal del proyecto, y no desde la carpeta del módulo datagenerator:
+##### Cómo compilar el datagenerator
+Para compilar este proyecto es necesario tener instalado SBT (Simple Build Tool)
 ```
-$ sbt datagenerator/run
-```
-
-para arrancar la generacion a fichero, usar el siguiente comando:
-```
-$ sbt datagenerator/run -DfileAppender.output=/ruta/fichero/salida.log
+$ sbt assembly
 ```
 
 ##### Lanzar el datagenerator usando el assembly jar
@@ -54,7 +49,17 @@ $ sbt datagenerator/run -DfileAppender.output=/ruta/fichero/salida.log
 $ java <options> -jar datagenerator-assembly-0.1.0-SNAPSHOT.jar
 ```
 
-Ejemplo, lanzar el datagenerator con un rate limit de 100, usando el sysloggerActor cómo plugin de salida
+Ejemplo 1: lanzar el datagenerator con un rate limit de 100, usando el sysloggerActor cómo plugin de salida
 ```
-$ java -Drate.limiter=100 -Dactive.actor=sysloggerActor -jar datagenerator-assembly-0.1.0-SNAPSHOT.jar
+$ java -Drate.limiter=100 -Dactive.actor=sysloggerActor -Dsyslog.host=localhost -Dsyslog.port=5140 -Dsyslog.facility=USER -jar datagenerator-assembly-0.1.0-SNAPSHOT.jar
+```
+
+Ejemplo 2: lanzar el datagenerator con un rate limit de 5, usando el kafkaWriterActor cómo plugin de salida
+```
+$ java -Dactive.actor=kafkaWriterActor -Drate.limiter=5 -Dkafka.brokers=localhost:9093  -jar datagenerator-assembly-0.1.0-SNAPSHOT.jar
+```
+
+Ejemplo 3: lanzar el datagenerator con un rate limit de 5, usando el fileWriterActor cómo plugin de salida
+```
+$ java -Dactive.actor=fileWriterActor -DfileAppender.output=/ruta/fichero/salida.log -Drate.limiter=5 -jar datagenerator-assembly-0.1.0-SNAPSHOT.jar
 ```
