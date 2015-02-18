@@ -6,7 +6,6 @@ import akka.actor.{PoisonPill, Actor}
 import com.typesafe.scalalogging.slf4j.LazyLogging
 import kafka.javaapi.producer.Producer
 import kafka.producer.ProducerConfig
-import kafka.producer.ProducerConfig
 import kafka.producer.{Partitioner, KeyedMessage, ProducerConfig}
 import org.bson.BSONObject
 import org.keedio.common.message.{Process, Stop, Ack}

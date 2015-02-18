@@ -6,7 +6,7 @@ import scala.collection.JavaConversions._
  * Created by luca on 26/11/14.
  */
 trait KafkaConfig extends ConfigAware {
-  val kafkaBrokers = keedioConfig.getStringList("kafka.brokers").mkString(",")
+  val kafkaBrokers = keedioConfig.getString("kafka.brokers")
 
   val serializerClass = keedioConfig.getString("kafka.serializer.class")
   val keySerializerClass = keedioConfig.getString("kafka.key.serializer.class")
