@@ -1,13 +1,18 @@
 package org.keedio.actors
 
 import java.text.DecimalFormat
+import java.util.concurrent.TimeUnit
 import javax.annotation.PostConstruct
 
 import akka.actor.{Actor, ActorRef, Props}
 import akka.util.Timeout
+import com.codahale.metrics._
+import com.codahale.metrics.ganglia.GangliaReporter
 import com.google.common.util.concurrent.RateLimiter
 import com.typesafe.scalalogging.slf4j.LazyLogging
-import org.keedio.common.message.{Process, Start, Stop}
+import info.ganglia.gmetric4j.gmetric.GMetric
+import info.ganglia.gmetric4j.gmetric.GMetric.UDPAddressingMode
+import org.keedio.common.message.{AckBytes, Process, Start, Stop}
 import org.keedio.datagenerator.config.{DataGeneratorConfigAware, SpringActorProducer}
 import org.keedio.datagenerator.domain.{DeleteTransaction, SaveAccount, SaveTransaction}
 import org.keedio.datagenerator.{RandomAccountGenerator, RandomAccountTransactionGenerator}
@@ -19,8 +24,11 @@ import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Component
 
 import scala.collection.mutable
+import scala.concurrent.{Future, Await}
 import scala.concurrent.duration._
 import scala.util.Random
+import akka.pattern.ask
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object RandomGeneratorActor {
 
@@ -30,13 +38,8 @@ object RandomGeneratorActor {
 @Scope(BeanDefinition.SCOPE_PROTOTYPE)
 class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorConfigAware {
 
-  var INSERT_COUNT: Int = 0
-  var UPDATE_COUNT: Int = 0
-  var DELETE_COUNT: Int = 0
-  var OPERATIONS: Int = 0
-  var OPERATIONS_SKIPPED: Int = 0
-  var START_TIME: Long = _
-  var lastOutput: Long = _
+  var bytesProcessedHist: Histogram = _
+  var operationsMeter: Meter = _
 
   val longFmt = new DecimalFormat("###,###")
 
@@ -51,19 +54,46 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
 
   implicit val timeout = Timeout(30 seconds)
 
+  val metricRegistry = new MetricRegistry
+  var jmxReporter: JmxReporter = _
+  var gangliaReporter: GangliaReporter = _
+  var consoleReporter: Slf4jReporter = _
+
   @PostConstruct
   def init(): Unit = {
     writer = context.actorOf(Props(classOf[SpringActorProducer], ctx, activeActor), activeActor)
 
     logger.info(s"Configuring rate limiter with $limitVal permits per second")
     rateLimiter = RateLimiter.create(limitVal)
+
+    val prefix = keedioConfig.getString("ganglia.group.prefix")
+
+    operationsMeter = metricRegistry.meter(MetricRegistry.name(prefix, "operations"))
+    bytesProcessedHist = metricRegistry.histogram(MetricRegistry.name(prefix, "bytes_processed"))
+
+    jmxReporter = JmxReporter.forRegistry(metricRegistry).build()
+
+    val ganglia = new GMetric(
+      keedioConfig.getString("ganglia.host"),
+      keedioConfig.getInt("ganglia.port"),
+      UDPAddressingMode.getModeForAddress(keedioConfig.getString("ganglia.host")), 1)
+
+    gangliaReporter = GangliaReporter.forRegistry(metricRegistry)
+      .build(ganglia)
+
+    consoleReporter = Slf4jReporter.forRegistry(metricRegistry)
+      .withLoggingLevel(Slf4jReporter.LoggingLevel.INFO)
+      .outputTo(logger.underlying).build()
   }
 
   def receive = {
     case Start() =>
-      logger.info("received start message")
-      START_TIME = System.currentTimeMillis()
-      writer ! Start()
+      logger.info("Received start message")
+
+      jmxReporter.start()
+      gangliaReporter.start(5, TimeUnit.SECONDS)
+      consoleReporter.start(5, TimeUnit.SECONDS)
+      //writer ! Start()
       doGenerateData()
     case Process(e) =>
       doGenerateData()
@@ -82,8 +112,8 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
 
     val numTxs = r.nextInt(numTxsPerAccount) + 1
 
-    val account = accountGenerator.generate()
-    writer ! SaveAccount(account.get)
+    //val account = accountGenerator.generate()
+    //writer ! SaveAccount(account.get)
     /*val accountFuture = writer ? SaveAccount(account.get)
     Await.ready(accountFuture, TIMEOUT)
 
@@ -100,7 +130,7 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
     val numUpdates: Int = Math.floor(numTxs * updateRatio).asInstanceOf[Int]
     val numInserts: Int = numTxs - numUpdates - numDeletes
 
-    logger.debug(s"Account: ${account.get.ccc}: $numTxs events will be generated ($numInserts inserts, $numUpdates updates, $numDeletes deletes) ")
+    //logger.debug(s"Account: ${account.get.ccc}: $numTxs events will be generated ($numInserts inserts, $numUpdates updates, $numDeletes deletes) ")
 
     for (idx <- 1 to numTxs) {
       rateLimiter.acquire()
@@ -108,57 +138,41 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
       if (idx <= numInserts) {
         // generate new transaction
 
-        val tx = txGenerator.generate(account)
-        //val future = writer ? SaveTransaction(tx.get)
-        writer ! SaveTransaction(tx.get)
-        //Await.ready(future, TIMEOUT)
+        val tx = txGenerator.generate(None)
+
+        val future = writer ? SaveTransaction(tx.get)
+        //writer ! SaveTransaction(tx.get)
+        Await.ready(future, TIMEOUT).collect({
+          case AckBytes(value:Long)=>
+            bytesProcessedHist.update(value)
+          case _ =>
+        })
 
         txs = txs ++ tx
 
       } else if (idx <= (numInserts+numUpdates)) {
         // update previously generated transaction
         val tx = txGenerator.update(txs(idx % numInserts))
-        //val future = writer ? SaveTransaction(tx)
-        writer ! SaveTransaction(tx)
+        val future = writer ? SaveTransaction(tx)
+        //writer ! SaveTransaction(tx)
+        Await.ready(future, TIMEOUT).collect({
+          case AckBytes(value:Long)=>bytesProcessedHist.update(value)
 
+          case _ =>
+        })
 
       } else {
-        //val future = writer ? DeleteTransaction(txs(idx % numInserts))
-        writer ! DeleteTransaction(txs(idx % numInserts))
-
+        val tx = txs(idx % numInserts)
+        val future = writer ? DeleteTransaction(tx)
+        //writer ! DeleteTransaction(txs(idx % numInserts))
+        Await.ready(future, TIMEOUT).collect({
+          case AckBytes(value:Long)=>bytesProcessedHist.update(value)
+          case _ =>
+        })
       }
-
-      txCount += 1
-      OPERATIONS +=1
-
-      RandomGeneratorActor.synchronized {
-        val durationSinceLastOutput = System.currentTimeMillis() - lastOutput;
-        if (durationSinceLastOutput > reportInterval) {
-          report(
-            OPERATIONS,
-            System.currentTimeMillis() - START_TIME)
-
-          //OplogTailActor.fromBSONTimestamp(doc.get("ts").get.asInstanceOf[BSONTimestamp]));
-          lastOutput = System.currentTimeMillis();
-        }
-      }
+      operationsMeter.mark()
     }
 
-
     self ! Process(None)
-
-  }
-
-  /**
-   * Prints progress.
-   *
-   * @param totalCount
-   * @param duration
-   */
-  private def report(totalCount: Long, duration: Long) {
-    val brate = totalCount.asInstanceOf[Double] / (duration / 1000.0)
-
-    logger.info(s"throughput: ${longFmt.format(brate)} req/sec")
-
   }
 }
