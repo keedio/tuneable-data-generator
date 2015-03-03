@@ -17,3 +17,5 @@ libraryDependencies +=  "junit" % "junit" % "4.11" % "test"
 libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.3.2"
 
 libraryDependencies += "org.springframework" % "spring-test" % "3.2.13.RELEASE" % "test"
+
+libraryDependencies += "io.dropwizard.metrics" % "metrics-ganglia" % "3.1.0"
