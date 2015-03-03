@@ -34,28 +34,23 @@ case class RandomAccountGenerator() extends RandomGenerator[Account, Nothing] {
 }
 
 case class RandomAccountTransactionGenerator() extends RandomGenerator[AccountTransaction, Account] with LazyLogging {
+  val r = new Random()
+
   override def generate(params: Option[Account] = None): Option[AccountTransaction] = {
-    params match {
-      case account: Some[Account] => {
+    val quantity = ("-" + RandomStringUtils.random(4, false, true)).toLong
+    val relativeBalance = (RandomStringUtils.random(5, false, true) + "." + RandomStringUtils.random(3, false, true)).toDouble
+    val valueDate = "" + System.currentTimeMillis()
+    val description = RandomStringUtils.random(20, true, false)
+    val reference = RandomStringUtils.random(16, false, true) + " " + RandomStringUtils.random(8, false, true)
+    val payer = RandomStringUtils.random(15, true, false)
+    val payee = RandomStringUtils.random(15, false, true)
+    val transactionType = "" + r.nextInt(6)
+    Some(AccountTransaction(
+      valueDate,
+      valueDate, description, reference, payer, payee, transactionType, quantity, relativeBalance, params))
 
-        val quantity = ("-" + RandomStringUtils.random(4, false, true)).toLong
-        val relativeBalance = (RandomStringUtils.random(5, false, true) + "." + RandomStringUtils.random(3, false, true)).toDouble
-        val valueDate = "" + System.currentTimeMillis()
-        val description = RandomStringUtils.random(20, true, false)
-        val reference = RandomStringUtils.random(16, false, true) + " " + RandomStringUtils.random(8, false, true)
-        val payer = RandomStringUtils.random(15, true, false)
-        val payee = RandomStringUtils.random(15, false, true)
 
-        val r = new Random()
 
-        val transactionType = "" + r.nextInt(6)
-
-        Some(AccountTransaction(
-          valueDate,
-          valueDate, description, reference, payer, payee, transactionType, quantity, relativeBalance, account.get))
-      }
-      case _ => logger.warn("Param type not valid"); None
-    }
   }
 
   override def update(tx: AccountTransaction): AccountTransaction = {
