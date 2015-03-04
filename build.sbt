@@ -3,7 +3,7 @@ import sbtassembly.Plugin._
 
 name := "tuneable-data-generator"
 
-version := "0.0.1"
+version := "0.1.0-SNAPSHOT"
 
 scalaVersion := "2.10.4"
 

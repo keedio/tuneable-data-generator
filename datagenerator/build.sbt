@@ -19,3 +19,5 @@ libraryDependencies += "org.apache.commons" % "commons-lang3" % "3.3.2"
 libraryDependencies += "org.springframework" % "spring-test" % "3.2.13.RELEASE" % "test"
 
 libraryDependencies += "io.dropwizard.metrics" % "metrics-ganglia" % "3.1.0"
+
+libraryDependencies += "com.mchange" % "c3p0" % "0.9.5"

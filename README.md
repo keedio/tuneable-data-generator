@@ -63,3 +63,24 @@ Ejemplo 3: lanzar el datagenerator con un rate limit de 5, usando el fileWriterA
 ```
 $ java -Dactive.actor=fileWriterActor -DfileAppender.output=/ruta/fichero/salida.log -Drate.limiter=5 -jar datagenerator-assembly-0.1.0-SNAPSHOT.jar
 ```
+
+Ejemplo 4: lanzar el datagenerator con un rate limit de 5, usando el dbWriterActor cómo plugin de salida:
+
+El dbWriterActor necesita las siguientes cuatro propiedades para funcionar correctamente:
+
+1. 'dbWriter.driverClass', por defecto: com.mysql.jdbc.Driver
+2. 'dbWriter.jdbcUrl', por defecto: jdbc:mysql://localhost:3306/logback
+3. 'dbWriter.user', por defecto: 'logback'
+4. 'dbWriter.password', por defecto: 'logback'
+
+Se puede sobreescribir el valor de cada una de ellas añadiendo el parametro '-D' oportuno.
+
+Adicionalmente, es necesario que en la BBDD se haya previamente creado el esquema usado por el dbappender.
+
+Mas información: [http://logback.qos.ch/manual/appenders.html#DBAppender](http://logback.qos.ch/manual/appenders.html#DBAppender)
+
+Tuneable datagenerator no proporciona ningun driver JDBC, es necesario añadir al classpath la ruta del jar que contiene el driver especifico para la bbdd que se va a usar.
+
+```
+$ java -cp ".:datagenerator-assembly-0.1.0-SNAPSHOT.jar:/path/to/db/specific/driver.jar" -D<additional_properties> -Drate.limiter=5 org.keedio.datagenerator.Main
+```
