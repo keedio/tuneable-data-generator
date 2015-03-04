@@ -3,6 +3,7 @@ package org.keedio.datagenerator
 import javax.sql.DataSource
 
 import akka.actor.{ActorSystem, Props}
+import akka.util.Timeout
 import ch.qos.logback.classic.{Level, LoggerContext}
 import ch.qos.logback.classic.db.DBAppender
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder
@@ -15,18 +16,26 @@ import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.commons.lang3.Validate
 import org.keedio.common.message.{Stop, Start}
 import org.keedio.datagenerator.config.{DataGeneratorConfigAware, DataGeneratorConfig, SpringActorProducer}
+import org.omg.CORBA.TIMEOUT
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
+import akka.pattern.ask
+
+import scala.concurrent.Await
+import scala.concurrent.duration._
 
 object Main extends App with DataGeneratorConfigAware {
 
   def configureLogger: Logger = {
+
+    val sharedPattern = "keedio.datagenerator: %date{yyyy-MM-dd HH:mm:ss.SSS} %level %logger{10} original.message: %msg%n"
 
     val ctx = LoggerFactory.getILoggerFactory.asInstanceOf[LoggerContext]
 
     val rootLogger = LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME)
       .asInstanceOf[ch.qos.logback.classic.Logger]
 
+    rootLogger.detachAndStopAllAppenders()
     rootLogger.setLevel(Level.valueOf(keedioConfig.getString("default.logLevel")))
 
     val logEncoder = new PatternLayoutEncoder()
@@ -44,6 +53,7 @@ object Main extends App with DataGeneratorConfigAware {
       .addAppender(logConsoleAppender.asInstanceOf[Appender[ILoggingEvent]])
 
     if (activeActor.equals("sysloggerActor")) {
+
       val syslogHost = keedioConfig.getString("syslog.host")
       val syslogFacility = keedioConfig.getString("syslog.facility")
       val syslogPort = keedioConfig.getInt("syslog.port")
@@ -54,7 +64,7 @@ object Main extends App with DataGeneratorConfigAware {
       appender.setName("SYSLOG")
       appender.setSyslogHost(syslogHost)
       appender.setFacility(syslogFacility)
-      appender.setSuffixPattern("keedio.datagenerator: %date{yyyy-MM-dd HH:mm:ss.SSS} %level %logger{10} %msg%n")
+      appender.setSuffixPattern(sharedPattern)
       appender.start()
 
       val syslogLogger = LoggerFactory.getLogger("syslogLogger")
@@ -66,7 +76,7 @@ object Main extends App with DataGeneratorConfigAware {
     else if (activeActor.equals("fileWriterActor")) {
       val encoder = new PatternLayoutEncoder()
       encoder.setContext(ctx)
-      encoder.setPattern("%date{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%-20logger{0}] %message%n")
+      encoder.setPattern(sharedPattern)
       encoder.start()
 
       val appender = new FileAppender()
@@ -111,9 +121,15 @@ object Main extends App with DataGeneratorConfigAware {
 
   val logger = configureLogger
 
+  implicit val timeout = Timeout(30 seconds)
+
   sys addShutdownHook {
     logger.warn("Shutting down ...")
-    actor ! Stop()
+    val future = actor ? Stop()
+
+    val TIMEOUT = Duration(30, SECONDS)
+    Await.ready(future, TIMEOUT)
+
     actorSystem.shutdown()
     actorSystem.awaitTermination()
 

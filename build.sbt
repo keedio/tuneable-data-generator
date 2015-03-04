@@ -44,7 +44,11 @@ mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) ⇒
         case PathList("META-INF", "MANIFEST.MF") => {MergeStrategy.discard}
 	case x => old(x)
 }
-})
+},
+  excludedJars in assembly := {
+    val cp = (fullClasspath in assembly).value
+    cp filter {_.data.getName == "log4j-1.2.17.jar"}
+  })
 
 lazy val root = project.in(file("."))
   .aggregate(

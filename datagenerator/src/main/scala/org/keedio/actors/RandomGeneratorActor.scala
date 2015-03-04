@@ -2,7 +2,7 @@ package org.keedio.actors
 
 import java.text.DecimalFormat
 import java.util.concurrent.TimeUnit
-import javax.annotation.PostConstruct
+import javax.annotation.{PreDestroy, PostConstruct}
 
 import akka.actor.{Actor, ActorRef, Props}
 import akka.util.Timeout
@@ -12,10 +12,10 @@ import com.google.common.util.concurrent.RateLimiter
 import com.typesafe.scalalogging.slf4j.LazyLogging
 import info.ganglia.gmetric4j.gmetric.GMetric
 import info.ganglia.gmetric4j.gmetric.GMetric.UDPAddressingMode
-import org.keedio.common.message.{AckBytes, Process, Start, Stop}
+import org.keedio.common.message._
 import org.keedio.datagenerator.config.{DataGeneratorConfigAware, SpringActorProducer}
-import org.keedio.datagenerator.domain.{DeleteTransaction, SaveAccount, SaveTransaction}
-import org.keedio.datagenerator.{RandomAccountGenerator, RandomAccountTransactionGenerator}
+import org.keedio.datagenerator.domain.{DeleteTransaction, SaveTransaction}
+import org.keedio.datagenerator.{DataGenerator, GeneratorFactory, DataAccountGenerator, DataAccountTransactionGenerator}
 import org.keedio.domain.AccountTransaction
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.config.BeanDefinition
@@ -59,6 +59,8 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
   var gangliaReporter: GangliaReporter = _
   var consoleReporter: Slf4jReporter = _
 
+  val txGenerator: DataGenerator = GeneratorFactory().getGenerator
+
   @PostConstruct
   def init(): Unit = {
     writer = context.actorOf(Props(classOf[SpringActorProducer], ctx, activeActor), activeActor)
@@ -97,18 +99,18 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
       doGenerateData()
     case Process(e) =>
       doGenerateData()
-    case e: Stop => {
-      logger.warn("received stop message")
-      context stop self
-    }
+    case Stop() =>
+      logger.warn("Received stop message")
+      txGenerator.close()
+      sender ! Ack
+
     case e:Any => logger.error(s"Unknown message of type: ${e.getClass}")
   }
 
   def doGenerateData(): Unit = {
     val r = Random
 
-    val accountGenerator = RandomAccountGenerator()
-    val txGenerator = RandomAccountTransactionGenerator()
+    //val accountGenerator = DataAccountGenerator()
 
     val numTxs = r.nextInt(numTxsPerAccount) + 1
 
@@ -124,7 +126,7 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
 
     var txCount = 0
 
-    var txs = mutable.MutableList[AccountTransaction]()
+    var txs = mutable.MutableList[AnyRef]()
 
     val numDeletes: Int = Math.floor(numTxs * deleteRatio).asInstanceOf[Int]
     val numUpdates: Int = Math.floor(numTxs * updateRatio).asInstanceOf[Int]

@@ -4,7 +4,7 @@ import java.nio.charset.Charset
 
 import akka.actor.Actor
 import org.keedio.common.message.{AckBytes, Ack, Stop}
-import org.keedio.datagenerator.domain.{DeleteTransaction, SaveAccount, SaveTransaction}
+import org.keedio.datagenerator.domain.{DeleteTransaction, SaveTransaction}
 import org.keedio.domain.{Account, Transaction}
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.config.BeanDefinition
@@ -20,16 +20,12 @@ class FileLoggerActor extends Actor{
   val logger = LoggerFactory.getLogger("fileLogger")
 
   def receive = {
-    case SaveTransaction(tx:Transaction) =>
-      val msg = s"SaveTransaction: ${tx.toString}"
+    case SaveTransaction(tx:AnyRef) =>
+      val msg = s"${tx.toString}"
       logger.info(msg)
       sender ! AckBytes(msg.getBytes.length)
-    case SaveAccount(account:Account) =>
-      val msg = s"SaveAccount: ${account.toString}"
-      logger.info(msg)
-      sender ! AckBytes(msg.getBytes.length)
-    case DeleteTransaction(tx:Transaction) =>
-      val msg = s"DeleteTransaction: ${tx.toString}"
+    case DeleteTransaction(tx:AnyRef) =>
+      val msg = s"${tx.toString}"
       logger.info(msg)
       sender ! AckBytes(msg.getBytes.length)
     case Stop() =>
