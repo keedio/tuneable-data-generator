@@ -14,7 +14,7 @@ import info.ganglia.gmetric4j.gmetric.GMetric
 import info.ganglia.gmetric4j.gmetric.GMetric.UDPAddressingMode
 import org.keedio.common.message._
 import org.keedio.datagenerator.config.{DataGeneratorConfigAware, SpringActorProducer}
-import org.keedio.datagenerator.domain.{DeleteTransaction, SaveTransaction}
+import org.keedio.datagenerator.domain.{RateLimiterSupervisor, DeleteTransaction, SaveTransaction}
 import org.keedio.datagenerator.{DataGenerator, GeneratorFactory, DataAccountGenerator, DataAccountTransactionGenerator}
 import org.keedio.domain.AccountTransaction
 import org.springframework.beans.factory.annotation.Autowired
@@ -48,7 +48,7 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
 
   var writer: ActorRef = _
 
-  var rateLimiter: RateLimiter = _
+  var rateLimiter: RateLimiterSupervisor = _
 
   val TIMEOUT = Duration(30, SECONDS)
 
@@ -66,7 +66,7 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
     writer = context.actorOf(Props(classOf[SpringActorProducer], ctx, activeActor), activeActor)
 
     logger.info(s"Configuring rate limiter with $limitVal permits per second")
-    rateLimiter = RateLimiter.create(limitVal)
+    rateLimiter = new RateLimiterSupervisor(RateLimiter.create(limitVal))
 
     val prefix = keedioConfig.getString("ganglia.group.prefix")
 
@@ -135,7 +135,7 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
     //logger.debug(s"Account: ${account.get.ccc}: $numTxs events will be generated ($numInserts inserts, $numUpdates updates, $numDeletes deletes) ")
 
     for (idx <- 1 to numTxs) {
-      rateLimiter.acquire()
+      rateLimiter.getRateLimiter.acquire()
 
       if (idx <= numInserts) {
         // generate new transaction
