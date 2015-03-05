@@ -1,6 +1,6 @@
 name := "datagenerator"
 
-version := "0.1.1"
+version := "0.1.2-SNAPSHOT"
 
 mainClass := Some("org.keedio.datagenerator.Main")
 
