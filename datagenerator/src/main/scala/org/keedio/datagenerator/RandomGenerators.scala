@@ -5,7 +5,7 @@ import java.io._
 import com.typesafe.scalalogging.slf4j.LazyLogging
 import org.apache.commons.compress.compressors.{CompressorException, CompressorStreamFactory}
 import org.apache.commons.compress.utils.IOUtils
-import org.apache.commons.lang3.RandomStringUtils
+import org.apache.commons.lang3.{StringUtils, RandomStringUtils}
 import org.keedio.datagenerator.config.DataGeneratorConfigAware
 import org.keedio.domain.{AccountTransaction, AccountId, Account}
 import scala.collection.JavaConversions._
@@ -13,7 +13,7 @@ import scala.util.Random
 
 case class GeneratorFactory() extends DataGeneratorConfigAware with LazyLogging{
   def getGenerator: DataGenerator = {
-    if (keedioConfig.getString("generator.type").equals("DataAccountTransactionGenerator"))
+    if (StringUtils.isEmpty(keedioConfig.getString("inputFileGenerator.sourceFile")))
       DataAccountTransactionGenerator()
     else{
       val generator = FromInputFileGenerator(keedioConfig.getString("inputFileGenerator.sourceFile"))

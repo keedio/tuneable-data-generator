@@ -84,3 +84,8 @@ Tuneable datagenerator no proporciona ningun driver JDBC, es necesario añadir a
 ```
 $ java -cp ".:datagenerator-assembly-0.1.0-SNAPSHOT.jar:/path/to/db/specific/driver.jar" -D<additional_properties> -Drate.limiter=5 org.keedio.datagenerator.Main
 ```
+
+Ejemplo 5: lanzar el datagenerator para que lea los logs a generar desde un fichero de logs:
+```
+$ java -DinputFileGenerator.sourceFile=/tmp/capped-ironport-mail.log -Drate.limiter=100 -DactiveActor=sysloggerActor -jar datagenerator-assembly-0.1.0.jar
+```

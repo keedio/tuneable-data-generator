@@ -1,5 +1,6 @@
 package org.keedio.datagenerator.config
 
+import org.apache.commons.lang3.StringUtils
 import org.keedio.config.ConfigAware
 
 /**
@@ -7,8 +8,8 @@ import org.keedio.config.ConfigAware
  */
 trait DataGeneratorConfigAware extends ConfigAware {
   val numTxsPerAccount = keedioConfig.getInt("num_txs_per_generated_account")
-  val updateRatio = if (!"FromInputFileGenerator".equals(keedioConfig.getString("generator.type"))) keedioConfig.getDouble("update_ratio") else 0.0
-  val deleteRatio =  if (!"FromInputFileGenerator".equals(keedioConfig.getString("generator.type"))) keedioConfig.getDouble("delete_ratio") else 0.0
+  val updateRatio = if (StringUtils.isEmpty(keedioConfig.getString("inputFileGenerator.sourceFile"))) keedioConfig.getDouble("update_ratio") else 0.0
+  val deleteRatio =  if (StringUtils.isEmpty(keedioConfig.getString("inputFileGenerator.sourceFile"))) keedioConfig.getDouble("delete_ratio") else 0.0
   val limitVal = keedioConfig.getInt("rate.limiter")
   val activeActor = keedioConfig.getString("active.actor")
 }
