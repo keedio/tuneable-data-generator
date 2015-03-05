@@ -9,7 +9,7 @@ import org.bson.BSONObject
 import org.keedio.actors.KafkaProducerActor
 import org.keedio.common.message.{AckBytes, Ack, Stop}
 import org.keedio.config.KafkaConfig
-import org.keedio.datagenerator.domain.{DeleteTransaction, SaveAccount, SaveTransaction}
+import org.keedio.datagenerator.domain.{DeleteTransaction, SaveTransaction}
 import org.keedio.domain.{Account, Transaction}
 import org.springframework.beans.factory.config.BeanDefinition
 import org.springframework.context.annotation.Scope
@@ -33,17 +33,12 @@ class KafkaWriterActor extends Actor with LazyLogging with KafkaConfig{
   val producer = new Producer[String, String](producerConfig)
 
   override def receive: PartialFunction[Any, Unit] = {
-    case SaveTransaction(tx:Transaction) => {
+    case SaveTransaction(tx:AnyRef) => {
       val msg = new KeyedMessage[String,String](topic, UUID.randomUUID().toString,tx.toString)
       producer.send(msg)
       sender ! AckBytes(msg.message.getBytes.length)
     }
-    case SaveAccount(account:Account) => {
-      val msg = new KeyedMessage[String,String](topic, UUID.randomUUID().toString,account.toString)
-      producer.send(msg)
-      sender ! AckBytes(msg.message.getBytes.length)
-    }
-    case DeleteTransaction(tx:Transaction) => {
+    case DeleteTransaction(tx:AnyRef) => {
       val msg = new KeyedMessage[String,String](topic, UUID.randomUUID().toString,tx.toString)
       producer.send(msg)
       sender ! AckBytes(msg.message.getBytes.length)

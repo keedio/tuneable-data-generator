@@ -1,6 +1,6 @@
 name := "datagenerator"
 
-version := "0.1.0"
+version := "0.1.1"
 
 mainClass := Some("org.keedio.datagenerator.Main")
 
@@ -21,3 +21,5 @@ libraryDependencies += "org.springframework" % "spring-test" % "3.2.13.RELEASE" 
 libraryDependencies += "io.dropwizard.metrics" % "metrics-ganglia" % "3.1.0"
 
 libraryDependencies += "com.mchange" % "c3p0" % "0.9.5"
+
+libraryDependencies += "org.apache.commons" % "commons-compress" % "1.9"

@@ -5,6 +5,7 @@ import org.junit.Assert._
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.keedio.datagenerator.config.DataGeneratorConfigTest
+import org.keedio.domain.{AccountTransaction, Account}
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner
@@ -18,9 +19,9 @@ class DataGeneratorsTest  {
 
   @Test
   def testAccountGenerator() {
-    val accGen = RandomAccountGenerator()
+    val accGen = DataAccountGenerator()
 
-    val account = accGen.generate().get
+    val account = accGen.generate().get.asInstanceOf[Account]
 
     assertNotNull(account)
     assertEquals("1234", account.accountId.bank)
@@ -36,16 +37,16 @@ class DataGeneratorsTest  {
 
   @Test
   def testAccountTransactionGenerator() {
-    val txGen = RandomAccountTransactionGenerator()
+    val txGen = DataAccountTransactionGenerator()
 
     val ntx = txGen.generate(None)
 
     assertEquals(None, ntx)
 
-    val accGen = RandomAccountGenerator()
+    val accGen = DataAccountGenerator()
     val account = accGen.generate()
     
-    val tx = txGen.generate(account).get
+    val tx = txGen.generate(account).get.asInstanceOf[AccountTransaction]
 
     assertNotNull(tx)
     assertTrue(tx.quantity < 0 )

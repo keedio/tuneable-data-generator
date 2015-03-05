@@ -1,20 +1,86 @@
 package org.keedio.datagenerator
 
+import java.io._
+
 import com.typesafe.scalalogging.slf4j.LazyLogging
-import org.apache.commons.lang3.RandomStringUtils
+import org.apache.commons.compress.compressors.{CompressorException, CompressorStreamFactory}
+import org.apache.commons.compress.utils.IOUtils
+import org.apache.commons.lang3.{StringUtils, RandomStringUtils}
+import org.keedio.datagenerator.config.DataGeneratorConfigAware
 import org.keedio.domain.{AccountTransaction, AccountId, Account}
 import scala.collection.JavaConversions._
 import scala.util.Random
 
-sealed trait RandomGenerator[T, S] {
-  def generate(params: Option[S]): Option[T]
+case class GeneratorFactory() extends DataGeneratorConfigAware with LazyLogging{
+  def getGenerator: DataGenerator = {
+    if (StringUtils.isEmpty(keedioConfig.getString("inputFileGenerator.sourceFile")))
+      DataAccountTransactionGenerator()
+    else{
+      val generator = FromInputFileGenerator(keedioConfig.getString("inputFileGenerator.sourceFile"))
 
-  def update(param: T): T
+      logger.info(s"Reading log messages from ${keedioConfig.getString("inputFileGenerator.sourceFile")}")
+
+      generator
+    }
+
+  }
 }
 
-case class RandomAccountGenerator() extends RandomGenerator[Account, Nothing] {
+sealed trait DataGenerator {
+  def generate(params: Option[AnyRef]): Option[AnyRef]
 
-  override def generate(params: Option[Nothing] = None): Option[Account] = {
+  def update(param: AnyRef): AnyRef
+
+  def close(): Unit
+}
+
+case class FromInputFileGenerator(filename: String) extends DataGenerator with LazyLogging{
+  var compressor: Option[BufferedReader] = None
+
+  def wrapFileInputStream(): InputStream ={
+    val fileInputStream = new BufferedInputStream(new FileInputStream(filename))
+
+    try {
+      new CompressorStreamFactory().createCompressorInputStream(fileInputStream)
+    } catch {
+      case e:CompressorException => fileInputStream
+    }
+  }
+
+  def init(): Option[BufferedReader] = {
+    if (compressor == None){
+      logger.info(s"(Re)initializing input stream for '$filename'")
+
+      compressor = Some(new BufferedReader(
+          new InputStreamReader(wrapFileInputStream())))
+    }
+    compressor
+  }
+
+  override def generate(params: Option[AnyRef]): Option[AnyRef] = {
+    init()
+
+    val line = compressor.get.readLine()
+
+    if (line == null){
+      close()
+      generate(params)
+    } else{
+      Some(line)
+    }
+  }
+
+  override def update(param: AnyRef): AnyRef = ???
+
+  override def close(): Unit = {
+    IOUtils.closeQuietly(compressor.get)
+    compressor = None
+  }
+}
+
+case class DataAccountGenerator() extends DataGenerator {
+
+  override def generate(params: Option[AnyRef] = None): Option[AnyRef] = {
     val bank = "1234"
     val branch = RandomStringUtils.random(4, false, true)
     val controlDigits = "09"
@@ -30,13 +96,16 @@ case class RandomAccountGenerator() extends RandomGenerator[Account, Nothing] {
     Some(Account(userId, bankId, bankId, balance, alias, currency, accountId))
   }
 
-  override def update(param: Account): Account = ???
+  override def update(param: AnyRef): AnyRef = ???
+
+  override def close(): Unit = {
+  }
 }
 
-case class RandomAccountTransactionGenerator() extends RandomGenerator[AccountTransaction, Account] with LazyLogging {
+case class DataAccountTransactionGenerator() extends DataGenerator with LazyLogging {
   val r = new Random()
 
-  override def generate(params: Option[Account] = None): Option[AccountTransaction] = {
+  override def generate(params: Option[AnyRef] = None): Option[AnyRef] = {
     val quantity = ("-" + RandomStringUtils.random(4, false, true)).toLong
     val relativeBalance = (RandomStringUtils.random(5, false, true) + "." + RandomStringUtils.random(3, false, true)).toDouble
     val valueDate = "" + System.currentTimeMillis()
@@ -47,15 +116,17 @@ case class RandomAccountTransactionGenerator() extends RandomGenerator[AccountTr
     val transactionType = "" + r.nextInt(6)
     Some(AccountTransaction(
       valueDate,
-      valueDate, description, reference, payer, payee, transactionType, quantity, relativeBalance, params))
+      valueDate, description, reference, payer, payee, transactionType, quantity, relativeBalance, params.asInstanceOf[Option[Account]]))
 
 
 
   }
 
-  override def update(tx: AccountTransaction): AccountTransaction = {
+  override def update(itx: AnyRef): AnyRef = {
     val r = new Random()
     val idx = r.nextInt(3)
+
+    val tx = itx.asInstanceOf[AccountTransaction]
 
     idx match {
       case 0 => tx.absQuantity =  tx.quantity - Math.floor(0.1 * tx.quantity)
@@ -65,5 +136,8 @@ case class RandomAccountTransactionGenerator() extends RandomGenerator[AccountTr
     }
 
     tx
+  }
+
+  override def close(): Unit = {
   }
 }
