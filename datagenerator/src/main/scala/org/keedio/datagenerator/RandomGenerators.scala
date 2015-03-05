@@ -34,7 +34,7 @@ sealed trait DataGenerator {
   def close(): Unit
 }
 
-case class FromInputFileGenerator(filename: String) extends DataGenerator{
+case class FromInputFileGenerator(filename: String) extends DataGenerator with LazyLogging{
   var compressor: Option[BufferedReader] = None
 
   def wrapFileInputStream(): InputStream ={
@@ -49,6 +49,8 @@ case class FromInputFileGenerator(filename: String) extends DataGenerator{
 
   def init(): Option[BufferedReader] = {
     if (compressor == None){
+      logger.info(s"(Re)initializing input stream for '$filename'")
+
       compressor = Some(new BufferedReader(
           new InputStreamReader(wrapFileInputStream())))
     }
