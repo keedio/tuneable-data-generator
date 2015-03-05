@@ -1,6 +1,6 @@
 name := "datagenerator"
 
-version := "0.1.2-SNAPSHOT"
+version := "0.1.3-SNAPSHOT"
 
 mainClass := Some("org.keedio.datagenerator.Main")
 
@@ -9,6 +9,8 @@ resolvers in ThisBuild ++= Seq(
   "Maven Central" at "http://repo1.maven.org/maven2/",
   Resolver.mavenLocal
 )
+
+javacOptions ++= Seq("-source", "1.7", "-target", "1.7")
 
 libraryDependencies += "com.google.guava"                  % "guava"                   % "14.0"
 
