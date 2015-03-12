@@ -18,3 +18,5 @@ libraryDependencies ++= Seq("org.apache.kafka" % "kafka_2.10" % "0.8.1.1"
     exclude("org.apache.zookeeper","zookeeper")
     exclude("org.apache.kafka","kafka_2.10")
 )
+
+ScoverageSbtPlugin.ScoverageKeys.coverageHighlighting := false
