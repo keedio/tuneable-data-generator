@@ -39,10 +39,6 @@ class DataGeneratorsTest  {
   def testAccountTransactionGenerator() {
     val txGen = DataAccountTransactionGenerator()
 
-    val ntx = txGen.generate(None)
-
-    assertEquals(None, ntx)
-
     val accGen = DataAccountGenerator()
     val account = accGen.generate()
     
