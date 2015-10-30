@@ -12,4 +12,5 @@ trait DataGeneratorConfigAware extends ConfigAware {
   val deleteRatio =  if (StringUtils.isEmpty(keedioConfig.getString("inputFileGenerator.sourceFile"))) keedioConfig.getDouble("delete_ratio") else 0.0
   val limitVal = keedioConfig.getInt("rate.limiter")
   val activeActor = keedioConfig.getString("active.actor")
+  val rollingSize = if (StringUtils.isEmpty(keedioConfig.getString("fileAppender.rollingSize"))) "1MB" else keedioConfig.getString("fileAppender.rollingSize")
 }

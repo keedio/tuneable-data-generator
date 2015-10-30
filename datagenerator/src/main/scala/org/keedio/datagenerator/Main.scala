@@ -86,7 +86,7 @@ object Main extends App with DataGeneratorConfigAware {
       rollingPolicy.setFileNamePattern(s"${keedioConfig.getString("fileAppender.output")}.%i")
 
       val triggeringPolicy = new SizeBasedTriggeringPolicy
-      triggeringPolicy.setMaxFileSize("1MB")
+      triggeringPolicy.setMaxFileSize(rollingSize)
 
       val appender = new RollingFileAppender
       appender.setContext(ctx)
