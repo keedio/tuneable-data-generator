@@ -11,6 +11,7 @@ import ch.qos.logback.classic.net.SyslogAppender
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.db.DataSourceConnectionSource
 import ch.qos.logback.core.encoder.Encoder
+import ch.qos.logback.core.rolling.{SizeBasedTriggeringPolicy, FixedWindowRollingPolicy, RollingFileAppender}
 import ch.qos.logback.core.{Appender, FileAppender, ConsoleAppender}
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.commons.lang3.Validate
@@ -79,11 +80,22 @@ object Main extends App with DataGeneratorConfigAware {
       encoder.setPattern(sharedPattern)
       encoder.start()
 
-      val appender = new FileAppender()
+      val rollingPolicy = new FixedWindowRollingPolicy
+      rollingPolicy.setMaxIndex(1)
+      rollingPolicy.setMaxIndex(10)
+      rollingPolicy.setFileNamePattern(s"${keedioConfig.getString("fileAppender.output")}.%i")
+
+      val triggeringPolicy = new SizeBasedTriggeringPolicy
+      triggeringPolicy.setMaxFileSize("1MB")
+
+      val appender = new RollingFileAppender
       appender.setContext(ctx)
       appender.setName("FILE")
       appender.setFile(keedioConfig.getString("fileAppender.output"))
       appender.setEncoder(encoder.asInstanceOf[Encoder[Nothing]])
+      appender.setRollingPolicy(rollingPolicy)
+      appender.setTriggeringPolicy(triggeringPolicy)
+      appender.setPrudent(true)
       appender.start()
 
       val fileLogger = LoggerFactory.getLogger("fileLogger")
