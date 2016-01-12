@@ -26,4 +26,8 @@ libraryDependencies += "com.mchange" % "c3p0" % "0.9.5"
 
 libraryDependencies += "org.apache.commons" % "commons-compress" % "1.9"
 
+libraryDependencies += "org.apache.qpid" % "qpid-amqp-1-0-client-jms" % "0.32"
+
+libraryDependencies += "jms" % "jms" % "1.1"
+
 ScoverageSbtPlugin.ScoverageKeys.coverageHighlighting := false
