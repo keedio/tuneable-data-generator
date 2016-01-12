@@ -1,5 +1,6 @@
 package org.keedio.datagenerator.config
 
+import com.typesafe.config.ConfigException.Missing
 import org.apache.commons.lang3.StringUtils
 import org.keedio.config.ConfigAware
 
@@ -12,5 +13,5 @@ trait DataGeneratorConfigAware extends ConfigAware {
   val deleteRatio =  if (StringUtils.isEmpty(keedioConfig.getString("inputFileGenerator.sourceFile"))) keedioConfig.getDouble("delete_ratio") else 0.0
   val limitVal = keedioConfig.getInt("rate.limiter")
   val activeActor = keedioConfig.getString("active.actor")
-  val rollingSize = if (StringUtils.isEmpty(keedioConfig.getString("fileAppender.rollingSize"))) "1MB" else keedioConfig.getString("fileAppender.rollingSize")
+  val rollingSize = try { keedioConfig.getString("fileAppender.rollingSize") } catch { case e:Missing => "1MB" }
 }
