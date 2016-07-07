@@ -29,7 +29,8 @@ object Main extends App with DataGeneratorConfigAware {
 
   def configureLogger: Logger = {
 
-    val sharedPattern = "keedio.datagenerator: %date{yyyy-MM-dd HH:mm:ss.SSS} %level %logger{10} original.message: %msg%n"
+    val sharedPattern = "%msg%n"
+
 
     val ctx = LoggerFactory.getILoggerFactory.asInstanceOf[LoggerContext]
 
@@ -74,7 +75,7 @@ object Main extends App with DataGeneratorConfigAware {
       syslogLogger.addAppender(appender)
 
     }
-    else if (activeActor.equals("fileWriterActor")) {
+    else if (activeActor.equals("fileWriterActor") || activeActor.equals("jsonFileWriterActor")) {
       val encoder = new PatternLayoutEncoder()
       encoder.setContext(ctx)
       encoder.setPattern(sharedPattern)
@@ -89,7 +90,7 @@ object Main extends App with DataGeneratorConfigAware {
       val rollingPolicy = new FixedWindowRollingPolicy
       rollingPolicy.setParent(appender)
       rollingPolicy.setMaxIndex(1)
-      rollingPolicy.setMaxIndex(10)
+      rollingPolicy.setMaxIndex(100)
       rollingPolicy.setFileNamePattern(s"${keedioConfig.getString("fileAppender.output")}.%i")
       rollingPolicy.setContext(ctx)
 
@@ -99,7 +100,6 @@ object Main extends App with DataGeneratorConfigAware {
       appender.setEncoder(encoder.asInstanceOf[Encoder[Nothing]])
       appender.setRollingPolicy(rollingPolicy)
       appender.setTriggeringPolicy(triggeringPolicy)
-      //appender.setPrudent(true)
 
       triggeringPolicy.start()
       rollingPolicy.start()

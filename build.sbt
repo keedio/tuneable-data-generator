@@ -4,9 +4,9 @@ import sbtassembly.Plugin._
 
 name := "tuneable-data-generator"
 
-version := "0.1.5-SNAPSHOT"
+version := "0.1.6-SNAPSHOT"
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.11.7"
 
 seq(assemblySettings: _*)
 
