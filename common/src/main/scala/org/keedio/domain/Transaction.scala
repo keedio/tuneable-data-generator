@@ -17,4 +17,11 @@ case class AccountTransaction(var valueDate: String,
                               var quantity: Double,
                               var relativeBalance: Double,
                               var owner: Option[Account],
-                              var absQuantity: Double = 0) extends Transaction
+                              var absQuantity: Double = 0,
+                              var currency: String = null,
+                              var srcCountry: String = null,
+                              var srcCity: String = null,
+                              var srcRegion: String = null,
+                              var destCountry: String = null,
+                              var destCity: String = null,
+                              var destRegion: String = null) extends Transaction

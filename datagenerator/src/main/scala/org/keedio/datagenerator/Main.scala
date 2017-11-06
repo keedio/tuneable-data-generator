@@ -11,16 +11,20 @@ import ch.qos.logback.classic.net.SyslogAppender
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.db.DataSourceConnectionSource
 import ch.qos.logback.core.encoder.Encoder
-import ch.qos.logback.core.rolling.{RollingPolicyBase, SizeBasedTriggeringPolicy, FixedWindowRollingPolicy, RollingFileAppender}
-import ch.qos.logback.core.{Appender, FileAppender, ConsoleAppender}
+import ch.qos.logback.core.rolling._
+import ch.qos.logback.core.{Appender, ConsoleAppender, FileAppender}
 import com.mchange.v2.c3p0.ComboPooledDataSource
 import org.apache.commons.lang3.Validate
-import org.keedio.common.message.{Stop, Start}
-import org.keedio.datagenerator.config.{DataGeneratorConfigAware, DataGeneratorConfig, SpringActorProducer}
+import org.keedio.common.message.{Start, Stop}
+import org.keedio.datagenerator.config.{DataGeneratorConfig, DataGeneratorConfigAware, SpringActorProducer}
 import org.omg.CORBA.TIMEOUT
 import org.slf4j.{Logger, LoggerFactory}
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import akka.pattern.ask
+import ch.qos.logback.core.net.SyslogOutputStream
+import com.papertrailapp.logback.Syslog4jAppender
+import org.productivity.java.syslog4j.SyslogConstants
+import org.productivity.java.syslog4j.impl.net.tcp.TCPNetSyslogConfig
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -60,19 +64,30 @@ object Main extends App with DataGeneratorConfigAware {
       val syslogFacility = keedioConfig.getString("syslog.facility")
       val syslogPort = keedioConfig.getInt("syslog.port")
 
-      val appender = new SyslogAppender()
-      appender.setPort(syslogPort)
+      val appender = new Syslog4jAppender[ILoggingEvent]
+      
+      val config = new TCPNetSyslogConfig(8, syslogHost, syslogPort)
+      config.setSoLinger(true)
+      config.setSoLingerSeconds(12345)
+      config.setKeepAlive(true)
+      config.setPersistentConnection(true)
+      config.setMaxMessageLength(128000)
+      config.setIdent("tuneable-data-generator")
+      
+      //config.setSendLocalName(true)
+      //config.setCharSet("UTF-8")
+      appender.setSyslogConfig(config)
       appender.setContext(ctx)
-      appender.setName("SYSLOG")
-      appender.setSyslogHost(syslogHost)
-      appender.setFacility(syslogFacility)
-      appender.setSuffixPattern(sharedPattern)
       appender.start()
-
+      
       val syslogLogger = LoggerFactory.getLogger("syslogLogger")
         .asInstanceOf[ch.qos.logback.classic.Logger]
+      
       syslogLogger.setAdditive(false)
       syslogLogger.addAppender(appender)
+      syslogLogger.info(s"syslog appender configured: ${appender.isStarted}")
+      syslogLogger.error(s"syslog appender configured: ${appender.isStarted}")
+      println(s"syslog appender configured: ${appender.isStarted}")
 
     }
     else if (activeActor.equals("fileWriterActor") || activeActor.equals("jsonFileWriterActor")) {
@@ -80,23 +95,24 @@ object Main extends App with DataGeneratorConfigAware {
       encoder.setContext(ctx)
       encoder.setPattern(sharedPattern)
       encoder.start()
+      
       val appender = new RollingFileAppender
-
+      appender.setPrudent(true)
 
       val triggeringPolicy = new SizeBasedTriggeringPolicy
       triggeringPolicy.setMaxFileSize(rollingSize)
       triggeringPolicy.setContext(ctx)
 
-      val rollingPolicy = new FixedWindowRollingPolicy
+      val rollingPolicy = new TimeBasedRollingPolicy
       rollingPolicy.setParent(appender)
-      rollingPolicy.setMaxIndex(1)
-      rollingPolicy.setMaxIndex(100)
-      rollingPolicy.setFileNamePattern(s"${keedioConfig.getString("fileAppender.output")}.%i")
+      //rollingPolicy.setMaxIndex(1)
+      rollingPolicy.setMaxHistory(1000)
+      rollingPolicy.setFileNamePattern(s"${keedioConfig.getString("fileAppender.output")}.%d{yyyy-MM-dd_HH-mm}.log")
       rollingPolicy.setContext(ctx)
 
       appender.setContext(ctx)
       appender.setName("FILE")
-      appender.setFile(keedioConfig.getString("fileAppender.output"))
+      //appender.setFile(keedioConfig.getString("fileAppender.output"))
       appender.setEncoder(encoder.asInstanceOf[Encoder[Nothing]])
       appender.setRollingPolicy(rollingPolicy)
       appender.setTriggeringPolicy(triggeringPolicy)
@@ -144,9 +160,10 @@ object Main extends App with DataGeneratorConfigAware {
 
   sys addShutdownHook {
     logger.warn("Shutting down ...")
+    
     val future = actor ? Stop()
 
-    val TIMEOUT = Duration(30, SECONDS)
+    val TIMEOUT = Duration(10, SECONDS)
     Await.ready(future, TIMEOUT)
 
     actorSystem.shutdown()
@@ -166,4 +183,8 @@ object Main extends App with DataGeneratorConfigAware {
     Props(classOf[SpringActorProducer], ctx, "randomGeneratorActor"), "randomGeneratorActor")
 
   actor ! Start()
+}
+
+class TGSyslogOutputStream(host: String, port: Int) extends SyslogOutputStream(host, port){
+  
 }

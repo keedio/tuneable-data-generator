@@ -52,6 +52,7 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
 
   val TIMEOUT = Duration(30, SECONDS)
 
+  var stopped: Boolean = false
   implicit val timeout = Timeout(30 seconds)
 
   val metricRegistry = new MetricRegistry
@@ -75,6 +76,7 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
 
     jmxReporter = JmxReporter.forRegistry(metricRegistry).build()
 
+    /*
     val ganglia = new GMetric(
       keedioConfig.getString("ganglia.host"),
       keedioConfig.getInt("ganglia.port"),
@@ -82,7 +84,8 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
 
     gangliaReporter = GangliaReporter.forRegistry(metricRegistry)
       .build(ganglia)
-
+    */
+    
     consoleReporter = Slf4jReporter.forRegistry(metricRegistry)
       .withLoggingLevel(Slf4jReporter.LoggingLevel.INFO)
       .outputTo(logger.underlying).build()
@@ -93,7 +96,7 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
       logger.info("Received start message")
 
       jmxReporter.start()
-      gangliaReporter.start(5, TimeUnit.SECONDS)
+      //gangliaReporter.start(5, TimeUnit.SECONDS)
       consoleReporter.start(5, TimeUnit.SECONDS)
       //writer ! Start()
       doGenerateData()
@@ -101,6 +104,7 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
       doGenerateData()
     case Stop() =>
       logger.warn("Received stop message")
+      stopped = true
       txGenerator.close()
       sender ! Ack
 
@@ -136,6 +140,8 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
 
     for (idx <- 1 to numTxs) {
       rateLimiter.getRateLimiter.acquire()
+      
+      Thread.`yield`()
 
       if (idx <= numInserts) {
         // generate new transaction
@@ -175,6 +181,7 @@ class RandomGeneratorActor() extends Actor with LazyLogging with DataGeneratorCo
       operationsMeter.mark()
     }
 
-    self ! Process(None)
+    if (!stopped)
+      self ! Process(None)
   }
 }

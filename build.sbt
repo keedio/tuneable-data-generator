@@ -22,9 +22,10 @@ resolvers in ThisBuild ++= Seq(
 
 libraryDependencies in ThisBuild ++= Seq(
   "com.novocode" % "junit-interface" % "0.11" % "test->default",
-  "com.typesafe.akka" %% "akka-actor" % "2.2.3"
+  "com.typesafe.akka" %% "akka-actor" % "2.3.15"
     exclude("io.netty","netty"),
-  "ch.qos.logback" % "logback-classic" % "1.1.2",
+  "ch.qos.logback" % "logback-classic" % "1.1.7",
+  "com.papertrailapp" % "logback-syslog4j" % "1.0.0",
   "com.typesafe.scala-logging" %% "scala-logging-slf4j" % "2.1.2",
   "org.joda" % "joda-convert" % "1.7",
   "org.scalatest" %% "scalatest" % "2.2.1" % "test"
@@ -43,7 +44,7 @@ mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) ⇒
 	case PathList(xs@_*) if xs.last endsWith "application.conf" => {MergeStrategy.concat}
         case PathList("META-INF", "spring.tooling") => {MergeStrategy.discard}
         case PathList("META-INF", "MANIFEST.MF") => {MergeStrategy.discard}
-	case x => old(x)
+	case x => MergeStrategy.first
 }
 }
 /*  ,excludedJars in assembly := {
@@ -71,3 +72,7 @@ addCommandAlias("cc", ";clean;compile")
 addCommandAlias("pt", ";clean;package;test")
 
 mainClass in assembly := Some("org.keedio.datagenerator.Main")
+
+unmanagedResourceDirectories in Compile <+= baseDirectory( _ / "src/main/scala" )
+
+unmanagedResourceDirectories in Compile <+= baseDirectory( _ / "app" )

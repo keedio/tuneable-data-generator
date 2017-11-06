@@ -2,6 +2,8 @@ name := "datagenerator"
 
 version := "0.1.6-SNAPSHOT"
 
+scalaVersion := "2.11.7"
+
 mainClass := Some("org.keedio.datagenerator.Main")
 
 resolvers in ThisBuild ++= Seq(
@@ -12,7 +14,7 @@ resolvers in ThisBuild ++= Seq(
 
 javacOptions ++= Seq("-source", "1.7", "-target", "1.7")
 
-libraryDependencies += "com.google.guava"                  % "guava"                   % "14.0"
+libraryDependencies += "com.google.guava" % "guava" % "14.0"
 
 libraryDependencies +=  "junit" % "junit" % "4.11" % "test"
 
@@ -28,6 +30,14 @@ libraryDependencies += "org.apache.commons" % "commons-compress" % "1.9"
 
 libraryDependencies += "org.apache.qpid" % "qpid-amqp-1-0-client-jms" % "0.32"
 
-libraryDependencies += "jms" % "jms" % "1.1"
+libraryDependencies += "com.google.code.gson" % "gson" % "2.6.2"
+
+libraryDependencies += "javax.jms" % "jms-api" % "1.1-rev-1"
+
+libraryDependencies += "com.papertrailapp" % "logback-syslog4j" % "1.0.0"
 
 ScoverageSbtPlugin.ScoverageKeys.coverageHighlighting := false
+
+unmanagedResourceDirectories in Compile <+= baseDirectory( _ / "src/main/scala" )
+
+unmanagedResourceDirectories in Compile <+= baseDirectory( _ / "app" )
